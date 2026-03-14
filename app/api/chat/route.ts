@@ -1,4 +1,4 @@
-export const runtime = "edge";
+// export const runtime = "edge";
 import { NextResponse } from "next/server";
 import { getDestinyNumber } from "@/utils/getDestinyNumber";
 
@@ -139,6 +139,7 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   } catch (err: any) {
+    console.error("ПОЛНАЯ ОШИБКА В API/CHAT:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
