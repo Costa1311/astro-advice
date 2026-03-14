@@ -21,17 +21,20 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         amount: {
-          value: "490.00",
+          value: "190.00",
           currency: "RUB",
         },
-        payment_method_data: {
-          type: "bank_card",
-        },
+
         confirmation: {
           type: "redirect",
           return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/?payment=success`,
         },
         description: `VIP разбор натальной карты для ${name} (${date})`,
+        metadata: {
+          name: name,
+          date: date,
+          isPaid: "true",
+        },
         capture: true,
       }),
     });
