@@ -27,15 +27,21 @@ export async function POST(request: Request) {
     const moonL = (218.316 + 13.176396 * n) % 360;
     let moon = moonL < 0 ? moonL + 360 : moonL;
 
+    const jupiterL = (245.0 + n * 0.083) % 360;
+    const saturnL = (120.0 + n * 0.033) % 360;
+
+    // Вспомогательная функция для нормализации градусов
+    const normalize = (deg: number) => ((deg % 360) + 360) % 360;
+
     // Оборачиваем числа в массивы [число], чтобы фронтенд (SVG) не ломался
     const planetsData = {
-      Sun: [lambda],
-      Moon: [moon],
-      Mercury: [lambda - 5],
-      Venus: [lambda + 2],
-      Mars: [lambda - 10],
-      Jupiter: [245.0],
-      Saturn: [120.0],
+      Sun: [normalize(lambda)],
+      Moon: [normalize(moon)],
+      Mercury: [normalize(lambda + Math.sin(n * 0.1) * 20)],
+      Venus: [normalize(lambda + 15)],
+      Mars: [normalize(lambda + n * 0.52)],
+      Jupiter: [normalize(jupiterL)],
+      Saturn: [normalize(saturnL)],
       Uranus: [35.0],
       Neptune: [340.0],
       Pluto: [290.0],

@@ -57,9 +57,32 @@ function AstrologyContent() {
   // --- СЛЕЖКА ЗА СТАТУСОМ ОПЛАТЫ ---
   useEffect(() => {
     const paymentStatus = searchParams.get("payment");
-    if (paymentStatus === "success" && chartData && !isPaidSuccess) {
-      router.replace("/", { scroll: false });
-      generateReading(true);
+
+    if (paymentStatus === "success") {
+      // 1. Достаем сохраненные данные из "тайника" браузера
+      const savedData = localStorage.getItem("astro_pending_payment");
+
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+
+        // 2. Восстанавливаем состояние страницы
+        setName(parsed.name);
+        setCity(parsed.city);
+        setDate(parsed.date);
+        setTime(parsed.time);
+        setChartData(parsed.chartData);
+
+        // 3. Очищаем тайник, чтобы при обновлении страницы прогноз не генерировался заново
+        localStorage.removeItem("astro_pending_payment");
+
+        // 4. Убираем "?payment=success" из адресной строки для красоты
+        router.replace("/", { scroll: false });
+
+        // 5. Запускаем платную генерацию (передаем true)
+        // Важно: вызываем функцию сразу с данными из parsed,
+        // так как стейт setChartData может не успеть обновиться мгновенно
+        generateReading(true, parsed);
+      }
     }
   }, [searchParams, chartData]);
 
@@ -104,25 +127,37 @@ function AstrologyContent() {
     }
   };
 
-  const generateReading = async (isPaid: boolean = false) => {
-    if (!chartData) return;
+  // Добавляем опциональный параметр dataForced
+  const generateReading = async (
+    isPaid: boolean = false,
+    dataForced: any = null,
+  ) => {
+    // Выбираем данные: либо из аргумента (при восстановлении), либо из стейта
+    const activeChart = dataForced?.chartData || chartData;
+    const activeName = dataForced?.name || name;
+    const activeCity = dataForced?.city || city;
+    const activeDate = dataForced?.date || date;
+
+    if (!activeChart) return;
+
     setIsGenerating(true);
     setInterpretation("");
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          city,
-          date,
-          planets: chartData.planets,
-          houses: chartData.cusps,
+          name: activeName,
+          city: activeCity,
+          date: activeDate,
+          planets: activeChart.planets,
+          houses: activeChart.cusps,
           isPaid,
         }),
       });
+      // ... остальной код логгирования и обработки ответа
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
       if (data.text) {
         setInterpretation(data.text);
         if (isPaid) setIsPaidSuccess(true);

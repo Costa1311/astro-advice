@@ -45,6 +45,7 @@ export const AstroForm = ({
             type="text"
             value={name}
             onChange={(e) => setName(capitalize(e.target.value))}
+            onBlur={(e) => setName(capitalize(e.target.value))}
             className="w-full p-3 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-purple-500 transition-all"
             placeholder="Имя"
             required
@@ -93,7 +94,7 @@ export const AstroForm = ({
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-purple-600 hover:bg-purple-500 p-4 rounded-xl font-bold transition-all disabled:opacity-50 shadow-lg shadow-purple-500/20"
+        className="w-full bg-purple-600 hover:bg-purple-500 p-4 rounded-xl font-bold transition-all disabled:opacity-50 shadow-lg shadow-purple-500/20 active:scale-95"
       >
         {loading ? "✨ Считаем звезды..." : "Построить карту"}
       </button>
