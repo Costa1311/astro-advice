@@ -29,14 +29,22 @@ export async function POST(request: Request) {
 
     // Подготовка данных с градусами для ИИ
     const detailedPlanets = Object.entries(planets)
-      .map(
-        ([p, d]) =>
-          `${p}: ${getZodiacSign(d as number)} (${Math.round((d as number) % 30)}°)`,
-      )
+      .map(([p, d]) => {
+        // Извлекаем число из массива (берём первый элемент)
+        const degree = Array.isArray(d) ? d[0] : d;
+        const sign = getZodiacSign(degree as number);
+        const degInSign = Math.floor((degree as number) % 30);
+        return `${p}: ${sign} (${degInSign}°)`;
+      })
       .join(", ");
 
-    const sunSign = getZodiacSign(planets.Sun);
-    const moonSign = getZodiacSign(planets.Moon);
+    const sunDegree = Array.isArray(planets.Sun) ? planets.Sun[0] : planets.Sun;
+    const moonDegree = Array.isArray(planets.Moon)
+      ? planets.Moon[0]
+      : planets.Moon;
+
+    const sunSign = getZodiacSign(sunDegree);
+    const moonSign = getZodiacSign(moonDegree);
 
     let systemMessage = "";
     let userPrompt = "";
