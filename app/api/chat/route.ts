@@ -48,8 +48,6 @@ export async function POST(request: Request) {
     let systemMessage = "";
     let userPrompt = "";
 
-    console.log("===> Отправка запроса в Mistral...");
-
     if (isPaid) {
       systemMessage = `Ты — элитный практикующий астропсихолог и нумеролог. Твоя задача — составить VIP-разбор натальной карты для ${name}. Ответ должен быть максимально глубоким, экспертным и объемным. ВНИМАНИЕ: Категорически запрещено использовать Markdown (звездочки, решетки). Используй только обычный текст, переносы строк и заглавные буквы для выделения`;
       userPrompt = `
@@ -99,22 +97,25 @@ export async function POST(request: Request) {
       `;
     }
 
-    const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
-        "Content-Type": "application/json",
+    const response = await fetch(
+      "https://api.siliconflow.cn/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.SILICON_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "deepseek-ai/DeepSeek-V3",
+          messages: [
+            { role: "system", content: systemMessage },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.7,
+          max_tokens: isPaid ? 3000 : 600,
+        }),
       },
-      body: JSON.stringify({
-        model: "mistral-large-latest",
-        messages: [
-          { role: "system", content: systemMessage },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.8,
-        max_tokens: isPaid ? 3000 : 600,
-      }),
-    });
+    );
 
     const data = await response.json();
 
@@ -123,17 +124,16 @@ export async function POST(request: Request) {
     }
 
     if (!response.ok) {
-      // Это критически важный лог для Amvera!
-      console.error("===> Ошибка Mistral API:", JSON.stringify(data));
+      console.error("SiliconFlow Error:", data);
       return NextResponse.json(
-        { error: "Ошибка авторизации или лимитов" },
+        { error: "API Error" },
         { status: response.status },
       );
     }
 
     return NextResponse.json({ text: data.choices[0].message.content });
   } catch (err: any) {
-    console.error("===> Ошибка сервера:", err.message);
+    console.error("CRITICAL ERROR:", err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
