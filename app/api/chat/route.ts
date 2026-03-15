@@ -1,4 +1,3 @@
-// export const runtime = "edge";
 import { NextResponse } from "next/server";
 import { getDestinyNumber } from "@/utils/getDestinyNumber";
 
@@ -98,27 +97,24 @@ export async function POST(request: Request) {
       `;
     }
 
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://astro-advice.ru",
-          "X-Title": "Astro Advice VIP",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.0-flash-001",
-          messages: [
-            { role: "system", content: systemMessage },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0.85,
-          max_tokens: isPaid ? 6000 : 800,
-        }),
+    const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://astro-advice.ru",
+        "X-Title": "Astro Advice VIP",
       },
-    );
+      body: JSON.stringify({
+        model: "mistral-large-latest",
+        messages: [
+          { role: "system", content: systemMessage },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.8,
+        max_tokens: isPaid ? 3000 : 600,
+      }),
+    });
 
     const data = await response.json();
 
@@ -127,9 +123,9 @@ export async function POST(request: Request) {
     }
 
     if (!response.ok) {
-      console.error("ОШИБКА OPENROUTER:", data);
+      console.error("Mistral Error:", data);
       return NextResponse.json(
-        { error: data.error?.message || "Ошибка API" },
+        { error: data.error?.message || "Mistral API Connection Error" },
         { status: response.status },
       );
     }
