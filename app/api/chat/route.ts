@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDestinyNumber } from "@/utils/getDestinyNumber";
+import { getDestinyNumber } from "../../../utils/getDestinyNumber";
 
 const getZodiacSign = (deg: number) => {
   const signs = [
