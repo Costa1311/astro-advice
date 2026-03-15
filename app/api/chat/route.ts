@@ -48,6 +48,8 @@ export async function POST(request: Request) {
     let systemMessage = "";
     let userPrompt = "";
 
+    console.log("===> Отправка запроса в Mistral...");
+
     if (isPaid) {
       systemMessage = `Ты — элитный практикующий астропсихолог и нумеролог. Твоя задача — составить VIP-разбор натальной карты для ${name}. Ответ должен быть максимально глубоким, экспертным и объемным. ВНИМАНИЕ: Категорически запрещено использовать Markdown (звездочки, решетки). Используй только обычный текст, переносы строк и заглавные буквы для выделения`;
       userPrompt = `
@@ -102,8 +104,6 @@ export async function POST(request: Request) {
       headers: {
         Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://astro-advice.ru",
-        "X-Title": "Astro Advice VIP",
       },
       body: JSON.stringify({
         model: "mistral-large-latest",
@@ -123,19 +123,17 @@ export async function POST(request: Request) {
     }
 
     if (!response.ok) {
-      console.error("Mistral Error:", data);
+      // Это критически важный лог для Amvera!
+      console.error("===> Ошибка Mistral API:", JSON.stringify(data));
       return NextResponse.json(
-        { error: data.error?.message || "Mistral API Connection Error" },
+        { error: "Ошибка авторизации или лимитов" },
         { status: response.status },
       );
     }
 
-    return NextResponse.json(
-      { error: "Ошибка API OpenRouter" },
-      { status: 500 },
-    );
+    return NextResponse.json({ text: data.choices[0].message.content });
   } catch (err: any) {
-    console.error("ПОЛНАЯ ОШИБКА В API/CHAT:", err);
+    console.error("===> Ошибка сервера:", err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
