@@ -104,6 +104,7 @@ export async function POST(request: Request) {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "HTTP-Referer": "https://astro-advice.ru",
         },
         body: JSON.stringify({
           model: "deepseek/deepseek-chat",
@@ -120,18 +121,19 @@ export async function POST(request: Request) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("OpenRouter API Error:", data);
+      console.error("===> OpenRouter Error:", data);
       return NextResponse.json(
-        { error: "Ошибка нейросети" },
+        { error: data.error?.message || "API Error" },
         { status: response.status },
       );
     }
 
+    console.log("===> [API] Success!");
     return NextResponse.json({ text: data.choices[0].message.content });
   } catch (err: any) {
-    console.error("Критическая ошибка сервера:", err.message);
+    console.error("===> [API] CRITICAL ERROR:", err.message);
     return NextResponse.json(
-      { error: "Внутренняя ошибка сервера" },
+      { error: "Internal Server Error" },
       { status: 500 },
     );
   }
