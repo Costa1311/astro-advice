@@ -112,8 +112,7 @@ export async function POST(request: Request) {
             { role: "user", content: userPrompt },
           ],
           temperature: 0.8,
-          // max_tokens: isPaid ? 3000 : 600,
-          max_tokens: 500,
+          max_tokens: isPaid ? 2000 : 400,
         }),
       },
     );
