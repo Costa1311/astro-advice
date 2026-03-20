@@ -97,41 +97,43 @@ export async function POST(request: Request) {
       `;
     }
 
-    const response = await fetch("Qwen/Qwen2.5-7B-Instruct", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.SILICON_API_KEY}`,
+    const response = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "deepseek/deepseek-chat",
+          messages: [
+            { role: "system", content: systemMessage },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.8,
+          // max_tokens: isPaid ? 3000 : 600,
+          max_tokens: 500,
+        }),
       },
-      body: JSON.stringify({
-        model: "Qwen/Qwen2.5-7B-Instruct",
-        messages: [
-          { role: "system", content: systemMessage },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.7,
-        // max_tokens: isPaid ? 3000 : 600,
-        max_tokens: 500,
-      }),
-    });
+    );
 
     const data = await response.json();
 
-    if (data.choices && data.choices[0]?.message?.content) {
-      return NextResponse.json({ text: data.choices[0].message.content });
-    }
-
     if (!response.ok) {
-      console.error("SiliconFlow Error:", data);
+      console.error("OpenRouter API Error:", data);
       return NextResponse.json(
-        { error: "API Error" },
+        { error: "Ошибка нейросети" },
         { status: response.status },
       );
     }
 
     return NextResponse.json({ text: data.choices[0].message.content });
   } catch (err: any) {
-    console.error("CRITICAL ERROR:", err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("Критическая ошибка сервера:", err.message);
+    return NextResponse.json(
+      { error: "Внутренняя ошибка сервера" },
+      { status: 500 },
+    );
   }
 }
