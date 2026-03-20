@@ -150,39 +150,44 @@
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
+  console.log("===> [DEBUG] API Call Started");
+
   try {
     const body = await request.json();
-    const { name } = body;
-
+    const { name, date, isPaid } = body;
     const apiKey = process.env.OPENROUTER_API_KEY;
+
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Ключ API не найден в Amvera" },
+        { error: "API Key is missing in Amvera settings" },
         { status: 500 },
       );
     }
 
-    // ВРЕМЕННО: Простой запрос без импортов и планет
+    // Простейший запрос без вычислений
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
           "HTTP-Referer": "https://astro-advice.ru",
           "X-Title": "Astro Test",
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-chat",
+          model: "deepseek/deepseek-chat,meta-llama/llama-3.1-70b-instruct",
           messages: [
-            { role: "system", content: "Ты астролог. Ответь кратко." },
+            {
+              role: "system",
+              content: "Ты краткий астролог. Пиши без спецсимволов.",
+            },
             {
               role: "user",
-              content: `Привет, меня зовут ${name}, сделай мини-прогноз.`,
+              content: `Привет, я ${name}, родился ${date}. Дай совет дня.`,
             },
           ],
-          max_tokens: 100,
+          max_tokens: 200,
         }),
       },
     );
@@ -190,16 +195,24 @@ export async function POST(request: Request) {
     const data = await response.json();
 
     if (!response.ok) {
+      console.error("===> [DEBUG] OpenRouter Error:", data);
       return NextResponse.json(
-        { error: "Ошибка OpenRouter" },
+        {
+          error: "OpenRouter returned an error",
+          details: data.error?.message || "Unknown",
+        },
         { status: response.status },
       );
     }
 
     return NextResponse.json({ text: data.choices[0].message.content });
   } catch (err: any) {
+    console.error("===> [DEBUG] CRITICAL CATCH:", err.message);
     return NextResponse.json(
-      { error: `Ошибка сервера: ${err.message}` },
+      {
+        error: "Internal Server Error",
+        message: err.message,
+      },
       { status: 500 },
     );
   }
