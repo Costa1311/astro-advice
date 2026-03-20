@@ -176,7 +176,7 @@ export async function POST(request: Request) {
           "X-Title": "Astro Test",
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-chat,meta-llama/llama-3.1-70b-instruct",
+          model: "mistralai/mistral-7b-instruct",
           messages: [
             {
               role: "system",
