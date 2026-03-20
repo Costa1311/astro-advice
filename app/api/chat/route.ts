@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDestinyNumber } from "../../../utils/getDestinyNumber";
+import { getDestinyNumber } from "@/utils/getDestinyNumber";
 
 const getZodiacSign = (deg: number) => {
   const signs = [
@@ -24,11 +24,18 @@ const getZodiacSign = (deg: number) => {
 export async function POST(request: Request) {
   try {
     const { name, planets, isPaid, date } = await request.json();
+
+    if (!planets) {
+      return NextResponse.json(
+        { error: "Данные планет не получены" },
+        { status: 400 },
+      );
+    }
     const destinyNumber = getDestinyNumber(date);
 
-    // Подготовка данных с градусами для ИИ
+    // Подготовка данных с градусами
     const detailedPlanets = Object.entries(planets)
-      .map(([p, d]) => {
+      .map(([p, d]: [string, any]) => {
         // Извлекаем число из массива (берём первый элемент)
         const degree = Array.isArray(d) ? d[0] : d;
         const sign = getZodiacSign(degree as number);
@@ -42,8 +49,8 @@ export async function POST(request: Request) {
       ? planets.Moon[0]
       : planets.Moon;
 
-    const sunSign = getZodiacSign(sunDegree);
-    const moonSign = getZodiacSign(moonDegree);
+    const sunSign = getZodiacSign(Number(sunDegree));
+    const moonSign = getZodiacSign(Number(moonDegree));
 
     let systemMessage = "";
     let userPrompt = "";
@@ -105,6 +112,7 @@ export async function POST(request: Request) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
           "HTTP-Referer": "https://astro-advice.ru",
+          "X-Title": "Astro Advice Project",
         },
         body: JSON.stringify({
           model: "deepseek/deepseek-chat,meta-llama/llama-3.1-70b-instruct",
@@ -113,7 +121,7 @@ export async function POST(request: Request) {
             { role: "user", content: userPrompt },
           ],
           temperature: 0.8,
-          max_tokens: isPaid ? 2000 : 400,
+          max_tokens: isPaid ? 2500 : 500,
         }),
       },
     );
