@@ -107,7 +107,7 @@ export async function POST(request: Request) {
           "HTTP-Referer": "https://astro-advice.ru",
         },
         body: JSON.stringify({
-          model: "meta-llama/llama-3.1-70b-instruct",
+          model: "deepseek/deepseek-chat:provider:together",
           messages: [
             { role: "system", content: systemMessage },
             { role: "user", content: userPrompt },
