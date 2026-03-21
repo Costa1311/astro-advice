@@ -148,39 +148,24 @@
 //   }
 // }
 import { NextResponse } from "next/server";
-// Используем прямой путь, раз алиас @ может капризничать в этой среде
-import { getDestinyNumber } from "../../../utils/getDestinyNumber";
+import { getDestinyNumber } from "@/utils/getDestinyNumber";
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { name, planets, isPaid, date } = body;
-
+    const { name, planets, isPaid, date } = await request.json();
     const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "API Key missing" }, { status: 500 });
-    }
 
-    // Рассчитываем число судьбы
-    const destinyNumber = getDestinyNumber(date || "01.01.1990");
-
-    // Безопасно собираем данные планет (берем первый элемент массива из консоли)
+    const destinyNumber = getDestinyNumber(date);
     const planetsSummary = planets
       ? Object.entries(planets)
-          .map(([name, val]: [string, any]) => {
-            const deg = Array.isArray(val) ? val[0] : val;
-            return `${name}: ${Math.floor(Number(deg))}°`;
-          })
+          .map(
+            ([p, d]: [string, any]) =>
+              `${p}: ${Math.floor(Number(Array.isArray(d) ? d[0] : d))}°`,
+          )
           .join(", ")
       : "нет данных";
 
-    const systemMessage = isPaid
-      ? "Ты элитный астролог. Пиши разбор от 700 слов БЕЗ Markdown (** или #)."
-      : "Ты краткий астролог. Один абзац без Markdown.";
-
-    const userPrompt = `Имя: ${name}, Число Судьбы: ${destinyNumber}, Планеты: ${planetsSummary}. Сделай разбор.`;
-
-    // ОТПРАВЛЯЕМ ЗАПРОС
+    // ПЫТАЕМСЯ ПРОБИТЬСЯ ЧЕРЕЗ TOGETHER (Они не Google)
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -189,47 +174,34 @@ export async function POST(request: Request) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
           "HTTP-Referer": "https://astro-advice.ru",
-          "X-Title": "Astro Advice",
         },
         body: JSON.stringify({
-          // 1. Используем массив моделей (Fallback). Если одна в бане, он обязан взять другую.
-          models: [
-            "deepseek/deepseek-chat:provider:deepinfra",
-            "deepseek/deepseek-chat:provider:together",
-            "meta-llama/llama-3.1-70b-instruct",
-          ],
+          // Указываем только ОДНОГО провайдера, который точно не Google
+          model: "deepseek/deepseek-chat:provider:together",
           messages: [
-            { role: "system", content: systemMessage },
-            { role: "user", content: userPrompt },
+            {
+              role: "system",
+              content: "Ты астролог. Пиши кратко и без Markdown.",
+            },
+            {
+              role: "user",
+              content: `Имя: ${name}, Число: ${destinyNumber}, Планеты: ${planetsSummary}. Сделай разбор.`,
+            },
           ],
-          // 2. Исключаем любых провайдеров, связанных с Google или Azure
-          route: "fallback",
-          provider: {
-            require_parameters: true,
-            data_collection: "deny", // Иногда это помогает обойти корпоративные фильтры
-          },
-          max_tokens: isPaid ? 2000 : 450,
-          temperature: 0.7,
+          max_tokens: isPaid ? 1500 : 400,
         }),
       },
     );
 
     const data = await response.json();
-
-    if (!response.ok) {
-      // Если OpenRouter все равно ругнется, мы увидим причину в логах Amvera
-      console.error("OpenRouter API Error Details:", JSON.stringify(data));
-      return NextResponse.json(
-        { error: data.error?.message || "Ошибка API" },
-        { status: response.status },
-      );
-    }
+    if (!response.ok) throw new Error(data.error?.message || "Blocked");
 
     return NextResponse.json({ text: data.choices[0].message.content });
   } catch (err: any) {
-    console.error("CRITICAL SERVER ERROR:", err.message);
+    console.error("API ERROR:", err.message);
+    // Если снова 403, возвращаем понятную ошибку
     return NextResponse.json(
-      { error: "Внутренняя ошибка сервера" },
+      { error: "Сервис временно недоступен. Попробуйте позже." },
       { status: 500 },
     );
   }
