@@ -147,25 +147,54 @@
 //     );
 //   }
 // }
+
 import { NextResponse } from "next/server";
-import { getDestinyNumber } from "@/utils/getDestinyNumber";
+// Используем прямой относительный путь для надежности
+import { getDestinyNumber } from "../../../utils/getDestinyNumber";
 
 export async function POST(request: Request) {
   try {
-    const { name, planets, isPaid, date } = await request.json();
+    const body = await request.json();
+    const { name, planets, isPaid, date } = body;
+
     const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      console.error("ERORR: API Key is missing!");
+      return NextResponse.json(
+        { error: "Ошибка конфигурации" },
+        { status: 500 },
+      );
+    }
 
-    const destinyNumber = getDestinyNumber(date);
-    const planetsSummary = planets
-      ? Object.entries(planets)
-          .map(
-            ([p, d]: [string, any]) =>
-              `${p}: ${Math.floor(Number(Array.isArray(d) ? d[0] : d))}°`,
-          )
-          .join(", ")
-      : "нет данных";
+    // Безопасный расчет числа судьбы
+    let destinyNumber = "7";
+    try {
+      const calculatedValue = getDestinyNumber(date || "01.01.1990");
+      destinyNumber = calculatedValue.toString(); // <--- ВОТ РЕШЕНИЕ
+    } catch (e) {
+      console.error("Error in getDestinyNumber:", e);
+    }
 
-    // ПЫТАЕМСЯ ПРОБИТЬСЯ ЧЕРЕЗ TOGETHER (Они не Google)
+    // БЕЗОПАСНАЯ СБОРКА ТЕКСТА ПЛАНЕТ
+    // Мы принудительно превращаем массив [31.75] в число 31.75
+    let planetsSummary = "";
+    if (planets && typeof planets === "object") {
+      planetsSummary = Object.entries(planets)
+        .map(([p, d]: [string, any]) => {
+          const rawValue = Array.isArray(d) ? d[0] : d;
+          const numValue = parseFloat(String(rawValue));
+          return `${p}: ${isNaN(numValue) ? "нет данных" : Math.floor(numValue) + "°"}`;
+        })
+        .join(", ");
+    }
+
+    const systemMessage = isPaid
+      ? "Ты элитный астролог. Пиши разбор от 700 слов БЕЗ Markdown (** или #). Используй только текст и переносы строк."
+      : "Ты краткий астролог. Напиши 1 интригующий абзац без Markdown.";
+
+    const userPrompt = `Имя: ${name}, Число Судьбы: ${destinyNumber}, Данные: ${planetsSummary}. Сделай разбор.`;
+
+    // ЗАПРОС К OPENROUTER
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -174,34 +203,37 @@ export async function POST(request: Request) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
           "HTTP-Referer": "https://astro-advice.ru",
+          "X-Title": "Astro AI",
         },
         body: JSON.stringify({
-          // Указываем только ОДНОГО провайдера, который точно не Google
-          model: "deepseek/deepseek-chat:provider:together",
+          // Пробуем Novita, так как она была в твоем списке и часто стабильнее
+          model: "deepseek/deepseek-chat:provider:novita",
           messages: [
-            {
-              role: "system",
-              content: "Ты астролог. Пиши кратко и без Markdown.",
-            },
-            {
-              role: "user",
-              content: `Имя: ${name}, Число: ${destinyNumber}, Планеты: ${planetsSummary}. Сделай разбор.`,
-            },
+            { role: "system", content: systemMessage },
+            { role: "user", content: userPrompt },
           ],
-          max_tokens: isPaid ? 1500 : 400,
+          max_tokens: isPaid ? 2000 : 450,
+          temperature: 0.8,
         }),
       },
     );
 
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error?.message || "Blocked");
+
+    if (!response.ok) {
+      console.error("OpenRouter Error Response:", data);
+      return NextResponse.json(
+        { error: "Ошибка нейросети" },
+        { status: response.status },
+      );
+    }
 
     return NextResponse.json({ text: data.choices[0].message.content });
   } catch (err: any) {
-    console.error("API ERROR:", err.message);
-    // Если снова 403, возвращаем понятную ошибку
+    // Этот текст мы увидим в консоли браузера, если всё упадет
+    console.error("CRITICAL SERVER ERROR:", err.stack);
     return NextResponse.json(
-      { error: "Сервис временно недоступен. Попробуйте позже." },
+      { error: "Internal Error", message: err.message },
       { status: 500 },
     );
   }
