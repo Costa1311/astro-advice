@@ -149,8 +149,7 @@
 // }
 
 import { NextResponse } from "next/server";
-// Используем прямой относительный путь для надежности
-import { getDestinyNumber } from "../../../utils/getDestinyNumber";
+import { getDestinyNumber } from "@/utils/getDestinyNumber";
 
 export async function POST(request: Request) {
   try {
@@ -158,43 +157,35 @@ export async function POST(request: Request) {
     const { name, planets, isPaid, date } = body;
 
     const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
-      console.error("ERORR: API Key is missing!");
-      return NextResponse.json(
-        { error: "Ошибка конфигурации" },
-        { status: 500 },
-      );
-    }
+    if (!apiKey)
+      return NextResponse.json({ error: "Ключ не найден" }, { status: 500 });
 
-    // Безопасный расчет числа судьбы
-    let destinyNumber = "7";
+    // ИСПРАВЛЕНИЕ ОШИБКИ 2322: Гарантируем, что destinyNumber — это строка
+    let destinyNumber: string = "7";
     try {
-      const calculatedValue = getDestinyNumber(date || "01.01.1990");
-      destinyNumber = calculatedValue.toString(); // <--- ВОТ РЕШЕНИЕ
+      const result = getDestinyNumber(date || "01.01.1990");
+      destinyNumber = String(result); // Принудительное приведение к строке
     } catch (e) {
-      console.error("Error in getDestinyNumber:", e);
+      console.error("Ошибка в расчете числа судьбы:", e);
     }
 
-    // БЕЗОПАСНАЯ СБОРКА ТЕКСТА ПЛАНЕТ
-    // Мы принудительно превращаем массив [31.75] в число 31.75
-    let planetsSummary = "";
+    // БЕЗОПАСНАЯ ОБРАБОТКА ПЛАНЕТ (достаем числа из массивов)
+    let planetsSummary = "данные отсутствуют";
     if (planets && typeof planets === "object") {
       planetsSummary = Object.entries(planets)
         .map(([p, d]: [string, any]) => {
-          const rawValue = Array.isArray(d) ? d[0] : d;
-          const numValue = parseFloat(String(rawValue));
-          return `${p}: ${isNaN(numValue) ? "нет данных" : Math.floor(numValue) + "°"}`;
+          const val = Array.isArray(d) ? d[0] : d;
+          return `${p}: ${Math.floor(Number(val))}°`;
         })
         .join(", ");
     }
 
     const systemMessage = isPaid
-      ? "Ты элитный астролог. Пиши разбор от 700 слов БЕЗ Markdown (** или #). Используй только текст и переносы строк."
-      : "Ты краткий астролог. Напиши 1 интригующий абзац без Markdown.";
+      ? "Ты элитный астролог. Напиши ОЧЕНЬ подробный VIP-разбор (минимум 700 слов). Только текст, без Markdown."
+      : "Ты краткий астролог. Напиши один интригующий абзац.";
 
-    const userPrompt = `Имя: ${name}, Число Судьбы: ${destinyNumber}, Данные: ${planetsSummary}. Сделай разбор.`;
+    const userPrompt = `Имя: ${name}, Число: ${destinyNumber}, Планеты: ${planetsSummary}. Сделай разбор.`;
 
-    // ЗАПРОС К OPENROUTER
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -206,14 +197,14 @@ export async function POST(request: Request) {
           "X-Title": "Astro AI",
         },
         body: JSON.stringify({
-          // Пробуем Novita, так как она была в твоем списке и часто стабильнее
-          model: "deepseek/deepseek-chat:provider:novita",
+          // Используем DeepInfra — это самый стабильный провайдер из твоего списка
+          model: "deepseek/deepseek-chat:provider:deepinfra",
           messages: [
             { role: "system", content: systemMessage },
             { role: "user", content: userPrompt },
           ],
-          max_tokens: isPaid ? 2000 : 450,
           temperature: 0.8,
+          max_tokens: isPaid ? 2500 : 500,
         }),
       },
     );
@@ -221,19 +212,19 @@ export async function POST(request: Request) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("OpenRouter Error Response:", data);
+      // Если провайдер DeepInfra вдруг подведет, мы увидим это в логах
+      console.error("OpenRouter Error:", data);
       return NextResponse.json(
-        { error: "Ошибка нейросети" },
+        { error: "Ошибка API" },
         { status: response.status },
       );
     }
 
     return NextResponse.json({ text: data.choices[0].message.content });
   } catch (err: any) {
-    // Этот текст мы увидим в консоли браузера, если всё упадет
-    console.error("CRITICAL SERVER ERROR:", err.stack);
+    console.error("SERVER ERROR:", err.message);
     return NextResponse.json(
-      { error: "Internal Error", message: err.message },
+      { error: "Внутренняя ошибка сервера" },
       { status: 500 },
     );
   }
