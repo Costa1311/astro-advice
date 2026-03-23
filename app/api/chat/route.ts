@@ -194,7 +194,7 @@ export async function POST(request: Request) {
           "HTTP-Referer": "https://astro-advice.ru",
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-chat", // Базовое имя модели
+          model: "deepseek/deepseek-chat",
           messages: [
             { role: "system", content: systemMsg },
             {
@@ -202,10 +202,10 @@ export async function POST(request: Request) {
               content: `Имя: ${name}, Число: ${destinyNumStr}, Планеты: ${planetsSummary}. Разбор:`,
             },
           ],
-          // ГАРАНТИЯ ОБХОДА GOOGLE:
-          routing: {
-            order: ["deepinfra", "together", "novita"], // Только эти ребята
-            allow_fallbacks: false, // Запрещаем переключаться на кого-то еще (на Google)
+          // ЖЕСТКИЙ ФИЛЬТР ПРОВАЙДЕРОВ
+          provider: {
+            order: ["DeepInfra", "Together", "Novita"], // Только проверенные ребята из твоего списка
+            allow_fallbacks: false, // КАТЕГОРИЧЕСКИ запрещаем переключаться на Google
           },
           temperature: 0.7,
           max_tokens: isPaid ? 2000 : 450,
