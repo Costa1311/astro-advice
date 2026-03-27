@@ -185,7 +185,7 @@ export async function POST(request: Request) {
 
     // 3. Запрос с глубокой проверкой ответа
     const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
+      "https://api.openrouter.ai/api/v1/chat/completions",
       {
         method: "POST",
         headers: {
