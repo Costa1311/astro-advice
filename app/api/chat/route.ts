@@ -192,9 +192,12 @@ export async function POST(request: Request) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
           "HTTP-Referer": "https://astro-advice.ru",
+          "X-Title": "Astro AI",
         },
         body: JSON.stringify({
-          model: "deepseek/deepseek-chat",
+          // МЕНЯЕМ МОДЕЛЬ НА ТУ, КОТОРОЙ НЕТ У GOOGLE
+          // Используем Llama 3.1 70B через Together — она не уступает DeepSeek
+          model: "meta-llama/llama-3.1-70b-instruct:provider:together",
           messages: [
             { role: "system", content: systemMsg },
             {
@@ -202,10 +205,10 @@ export async function POST(request: Request) {
               content: `Имя: ${name}, Число: ${destinyNumStr}, Планеты: ${planetsSummary}. Разбор:`,
             },
           ],
-          // ЖЕСТКИЙ ФИЛЬТР ПРОВАЙДЕРОВ
+          // Дополнительная страховка: запрет на переключения
+          route: "fallback",
           provider: {
-            order: ["DeepInfra", "Together", "Novita"], // Только проверенные ребята из твоего списка
-            allow_fallbacks: false, // КАТЕГОРИЧЕСКИ запрещаем переключаться на Google
+            allow_fallbacks: false,
           },
           temperature: 0.7,
           max_tokens: isPaid ? 2000 : 450,
