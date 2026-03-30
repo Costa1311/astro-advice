@@ -143,6 +143,7 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       console.error("SILICONFLOW ERROR:", data);
+      console.error("!!! НОВЫЙ КОД ЗАПУЩЕН !!!");
       return NextResponse.json(
         { error: "API Error", details: data },
         { status: response.status },

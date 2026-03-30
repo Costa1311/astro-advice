@@ -5,8 +5,7 @@ meta:
     version: 20
 build:
   steps:
-    - name: install and build
+    - name: build-project
       command: npm install && npm run build
 run:
-  command: npm run start -- -p 3000
-  containerPort: 3000
+  command: npm run start
