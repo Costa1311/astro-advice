@@ -22,6 +22,12 @@ const getZodiacSign = (deg: number) => {
 };
 
 export async function POST(request: Request) {
+  //   const key = (process.env.SILICON_API_KEY || "").replace(/[\n\r\s\t]/g, "");
+  const rawKey = process.env.SILICON_API_KEY || "";
+  const key = rawKey.replace(/[\n\r\s\t]/g, "").trim();
+  console.log("--- API KEY CHECK ---");
+  console.log("Ключ загружен:", !!key);
+  if (key) console.log("Символов в ключе:", key.length);
   try {
     const { name, planets, isPaid, date } = await request.json();
 
@@ -105,12 +111,13 @@ export async function POST(request: Request) {
     }
 
     const response = await fetch(
-      "https://api.siliconflow.cn/v1/chat/completions",
+      "https://api.siliconflow.com/v1/chat/completions",
       {
         method: "POST",
+        cache: "no-store",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.SILICON_API_KEY}`,
+          Authorization: `Bearer ${key}`,
         },
         body: JSON.stringify({
           model: "deepseek-ai/DeepSeek-V3",
@@ -120,6 +127,7 @@ export async function POST(request: Request) {
           ],
           temperature: 0.8,
           max_tokens: isPaid ? 3000 : 600,
+          stream: false,
         }),
       },
     );
@@ -127,14 +135,12 @@ export async function POST(request: Request) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("SiliconFlow Error:", data);
+      console.error("КРИТИЧЕСКИЙ ЛОГ ОШИБКИ:", JSON.stringify(data, null, 2));
       return NextResponse.json(
-        { error: data.error?.message || "API Error" },
-        { status: response.status },
+        { error: "Invalid Key", details: data },
+        { status: 401 },
       );
     }
-
-    console.log("===> [API] Success!");
     return NextResponse.json({ text: data.choices[0].message.content });
   } catch (err: any) {
     console.error("===> [API] CRITICAL ERROR:", err.message);

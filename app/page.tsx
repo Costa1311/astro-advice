@@ -33,6 +33,9 @@ function AstrologyContent() {
       return;
     }
 
+    const dataToSave = { name, city, date, time, chartData };
+    localStorage.setItem("astro_pending_payment", JSON.stringify(dataToSave));
+
     setIsGenerating(true);
     try {
       const res = await fetch("/api/payment", {
@@ -51,6 +54,7 @@ function AstrologyContent() {
       console.error("Yookassa Error:", err);
       alert("Ошибка платежной системы. Попробуйте позже.");
       setIsGenerating(false);
+      localStorage.removeItem("astro_pending_payment");
     }
   };
 

@@ -1,5 +1,6 @@
 import { formatAstrologyText } from "@/utils/formatAstrologyText";
 import { ReadingSkeleton } from "./ui/ReadingSkeleton";
+import { useState, useEffect } from "react";
 
 interface ReadingProps {
   interpretation: string;
@@ -18,14 +19,66 @@ export const Reading = ({
   onPay,
   onDownload,
 }: ReadingProps) => {
+  const [loadingText, setLoadingText] = useState(
+    "Считываем положение планет...",
+  );
+
+  useEffect(() => {
+    if (isGenerating && isPaid) {
+      const phrases = [
+        "Считываем положение планет...",
+        "Анализируем влияние Лилит на вашу судьбу...",
+        "Раскрываем финансовые узлы Юпитера...",
+        "Синтезируем предназначение по Числу Судьбы...",
+        "Звезды почти выстроились в ряд...",
+      ];
+      let i = 0;
+      const interval = setInterval(() => {
+        i = (i + 1) % phrases.length;
+        setLoadingText(phrases[i]);
+      }, 3500); // Меняем фразу каждые 3.5 секунды
+      return () => clearInterval(interval);
+    }
+  }, [isGenerating, isPaid]);
+
+  //   if (isGenerating) {
+  //     return (
+  //       <div className="w-full py-12 flex flex-col items-center space-y-4">
+  //         <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+  //         <ReadingSkeleton />
+  //         <p className="text-purple-400 animate-pulse font-medium">
+  //           Считываем положение планет...
+  //         </p>
+  //       </div>
+  //     );
+  //   }
   if (isGenerating) {
     return (
-      <div className="w-full py-12 flex flex-col items-center space-y-4">
-        <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
-        <ReadingSkeleton />
-        <p className="text-purple-400 animate-pulse font-medium">
-          Считываем положение планет...
-        </p>
+      <div className="w-full py-12 flex flex-col items-center space-y-6 text-center">
+        {/* Более красивый спиннер */}
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-purple-500/20 rounded-full" />
+          <div className="absolute top-0 w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            ✨
+          </div>
+        </div>
+
+        <div className="w-full max-w-md">
+          <ReadingSkeleton />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xl font-medium bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent animate-pulse">
+            {isPaid ? loadingText : "Минутку, звезды говорят..."}
+          </p>
+          {isPaid && (
+            <p className="text-xs text-gray-500 italic">
+              VIP-разбор генерируется дольше обычного, так как содержит более
+              800 слов
+            </p>
+          )}
+        </div>
       </div>
     );
   }
