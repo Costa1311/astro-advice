@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDestinyNumber } from "@/utils/getDestinyNumber";
 
+export const dynamic = "force-dynamic";
+
 const getZodiacSign = (deg: number) => {
   const signs = [
     "Овен",
@@ -22,12 +24,19 @@ const getZodiacSign = (deg: number) => {
 };
 
 export async function POST(request: Request) {
-  //   const key = (process.env.SILICON_API_KEY || "").replace(/[\n\r\s\t]/g, "");
   const rawKey = process.env.SILICON_API_KEY || "";
   const key = rawKey.replace(/[\n\r\s\t]/g, "").trim();
-  console.log("--- API KEY CHECK ---");
-  console.log("Ключ загружен:", !!key);
+  console.log("--- [SERVER-SIDE] AUTH CHECK ---");
+  console.log("API Key Present:", !!key);
   if (key) console.log("Символов в ключе:", key.length);
+
+  if (!key) {
+    return NextResponse.json(
+      { error: "API Key is missing in server environment variables." },
+      { status: 401 },
+    );
+  }
+
   try {
     const { name, planets, isPaid, date } = await request.json();
 
@@ -42,7 +51,6 @@ export async function POST(request: Request) {
     // Подготовка данных с градусами
     const detailedPlanets = Object.entries(planets)
       .map(([p, d]: [string, any]) => {
-        // Извлекаем число из массива (берём первый элемент)
         const degree = Array.isArray(d) ? d[0] : d;
         const sign = getZodiacSign(degree as number);
         const degInSign = Math.floor((degree as number) % 30);
@@ -114,7 +122,6 @@ export async function POST(request: Request) {
       "https://api.siliconflow.com/v1/chat/completions",
       {
         method: "POST",
-        cache: "no-store",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${key}`,
@@ -135,15 +142,16 @@ export async function POST(request: Request) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("КРИТИЧЕСКИЙ ЛОГ ОШИБКИ:", JSON.stringify(data, null, 2));
+      console.error("SILICONFLOW ERROR:", data);
       return NextResponse.json(
-        { error: "Invalid Key", details: data },
-        { status: 401 },
+        { error: "API Error", details: data },
+        { status: response.status },
       );
     }
+
     return NextResponse.json({ text: data.choices[0].message.content });
   } catch (err: any) {
-    console.error("===> [API] CRITICAL ERROR:", err.message);
+    console.error("CRITICAL ERROR:", err.message);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },
