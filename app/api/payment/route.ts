@@ -21,7 +21,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         amount: {
-          value: "190.00",
+          value: "2.00",
           currency: "RUB",
         },
 
