@@ -9,6 +9,7 @@ import { Reading } from "@/components/Reading";
 import NatalMap from "@/components/NatalMap";
 import { PdfTemplate } from "@/components/PdfTemplate";
 import { EmptyState } from "@/components/EmptyState";
+import { PaymentModal } from "@/components/PaymentModal";
 import { Disclaimer } from "@/components/Footer";
 
 // 1. Создаем внутренний компонент, где лежит вся твоя логика
@@ -23,6 +24,7 @@ function AstrologyContent() {
   const [loading, setLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPaidSuccess, setIsPaidSuccess] = useState(false);
+  const [showPayModal, setShowPayModal] = useState(false);
 
   const searchParams = useSearchParams();
 
@@ -215,7 +217,7 @@ function AstrologyContent() {
                 isGenerating={isGenerating}
                 isPaid={isPaidSuccess}
                 onGenerateFree={() => generateReading(false)}
-                onPay={handlePayment}
+                onPay={() => setShowPayModal(true)}
                 onDownload={downloadPDF}
               />
             </div>
@@ -233,6 +235,14 @@ function AstrologyContent() {
         interpretation={interpretation}
       />
       <Disclaimer />
+      <PaymentModal
+        isOpen={showPayModal}
+        onClose={() => setShowPayModal(false)}
+        onConfirm={() => {
+          setShowPayModal(false); // Закрываем модалку
+          handlePayment(); // Запускаем переход к ЮKassa
+        }}
+      />
     </main>
   );
 }
